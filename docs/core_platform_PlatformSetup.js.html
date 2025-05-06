@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: core/platform/PlatformSetup.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: core/platform/PlatformSetup.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import IPlatformSetup from './IPlatformSetup';
+import { runCommand } from '../../utils/commandRunner';
+import { log } from '../../utils/logger';
+import path from 'path';
+import fs from 'fs';
+
+/**
+ * PlatformSetup class.
+ * Sets up the specified platform for a React Native project.
+ * @extends IPlatformSetup
+ */
+class PlatformSetup extends IPlatformSetup {
+  /**
+   * Constructor for PlatformSetup.
+   * @param {string} directory - The project directory.
+   * @param {string} name - The project name.
+   */
+  constructor(directory, name) {
+    super();
+    this.directory = directory;
+    this.name = name;
+  }
+
+  /**
+   * Sets up the specified platform.
+   * @param {string} platform - The platform to set up (e.g., 'android', 'ios').
+   * @param {string} url - The URL to be used in the WebView component.
+   * @returns {Promise&lt;void>}
+   */
+  async setupPlatform(platform, url) {
+    log('INFO', `Setting up platform: ${platform} in directory ${this.directory} and name is ${this.name}`);
+    const projectDir = path.join(this.directory, this.name);
+    await runCommand('npm', ['install', '--save', 'react-native-webview'], {
+      cwd: projectDir
+    });
+
+    if (platform === 'ios') {
+      await this.setupIOS(projectDir);
+    }
+
+    this.createWebViewComponent(projectDir, url);
+  }
+
+  /**
+   * Sets up the iOS platform.
+   * @param {string} projectDir - The project directory.
+   * @returns {Promise&lt;void>}
+   */
+  async setupIOS(projectDir) {
+    log('INFO', 'Installing CocoaPods dependencies for iOS');
+    try {
+      await runCommand('pod', ['install'], { cwd: path.join(projectDir, 'ios') });
+      log('INFO', 'CocoaPods dependencies installed successfully');
+    } catch (error) {
+      log('ERROR', `Failed to install CocoaPods dependencies: ${error.message}`);
+      log('INFO', 'You can manually install CocoaPods dependencies by running "pod install" in the ios directory');
+    }
+  }
+
+  /**
+   * Creates a WebView component.
+   * @param {string} projectDir - The project directory.
+   * @param {string} url - The URL to be used in the WebView component.
+   */
+  createWebViewComponent(projectDir, url) {
+    const srcDir = path.join(projectDir, 'src');
+    if (!fs.existsSync(srcDir)) {
+      fs.mkdirSync(srcDir, { recursive: true });
+    }
+
+    const webviewComponent = `
+import React from 'react';
+import { StyleSheet, View, SafeAreaView, Platform, StatusBar } from 'react-native';
+import { WebView } from 'react-native-webview';
+
+const WebViewScreen = ({ url }) => (
+  &lt;SafeAreaView style={styles.container}>
+    &lt;WebView source={{ uri: url }} style={styles.webview} />
+  &lt;/SafeAreaView>
+);
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    marginTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
+  webview: {
+    flex: 1,
+  },
+});
+
+export default WebViewScreen;
+    `;
+
+    fs.writeFileSync(path.join(srcDir, 'WebViewScreen.tsx'), webviewComponent);
+
+    const appComponent = `
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import WebViewScreen from './src/WebViewScreen';
+
+const App = () => {
+  const websiteUrl = '${url}';
+
+  return (
+    &lt;View style={styles.container}>
+      &lt;WebViewScreen url={websiteUrl} />
+    &lt;/View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
+
+export default App;
+    `;
+
+    fs.writeFileSync(path.join(projectDir, 'App.tsx'), appComponent);
+
+    const tsConfig = `
+{
+  "compilerOptions": {
+    "jsx": "react"
+  },
+  "extends": "@react-native/typescript-config/tsconfig.json",
+  "exclude": ["node_modules", "babel.config.js", "metro.config.js", "jest.config.js"]
+}
+    `;
+
+    fs.writeFileSync(path.join(projectDir, 'tsconfig.json'), tsConfig);
+
+    log('INFO', `WebView component created with URL: ${url}`);
+  }
+}
+
+export default PlatformSetup;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-utils_commandRunner.html">utils/commandRunner</a></li><li><a href="module-utils_logger.html">utils/logger</a></li></ul><h3>Classes</h3><ul><li><a href="AddPlatformCommand.html">AddPlatformCommand</a></li><li><a href="AddPlatformCommandValidator.html">AddPlatformCommandValidator</a></li><li><a href="CreateCommand.html">CreateCommand</a></li><li><a href="CreateCommandValidator.html">CreateCommandValidator</a></li><li><a href="DIContainer.html">DIContainer</a></li><li><a href="ErrorHandler.html">ErrorHandler</a></li><li><a href="IconManager.html">IconManager</a></li><li><a href="PlatformSetup.html">PlatformSetup</a></li><li><a href="ProjectCreator.html">ProjectCreator</a></li><li><a href="RemovePlatformCommand.html">RemovePlatformCommand</a></li><li><a href="RemovePlatformCommandValidator.html">RemovePlatformCommandValidator</a></li><li><a href="SplashScreenManager.html">SplashScreenManager</a></li><li><a href="UpdateIconCommand.html">UpdateIconCommand</a></li><li><a href="UpdateIconCommandValidator.html">UpdateIconCommandValidator</a></li><li><a href="UpdateSplashCommand.html">UpdateSplashCommand</a></li><li><a href="UpdateSplashCommandValidator.html">UpdateSplashCommandValidator</a></li><li><a href="WebViewComponentCreator.html">WebViewComponentCreator</a></li></ul><h3>Interfaces</h3><ul><li><a href="IAddPlatformCommand.html">IAddPlatformCommand</a></li><li><a href="IAddPlatformCommandValidator.html">IAddPlatformCommandValidator</a></li><li><a href="ICreateCommand.html">ICreateCommand</a></li><li><a href="ICreateCommandValidator.html">ICreateCommandValidator</a></li><li><a href="IIconManager.html">IIconManager</a></li><li><a href="IPlatformSetup.html">IPlatformSetup</a></li><li><a href="IProjectCreator.html">IProjectCreator</a></li><li><a href="IRemovePlatformCommand.html">IRemovePlatformCommand</a></li><li><a href="IRemovePlatformCommandValidator.html">IRemovePlatformCommandValidator</a></li><li><a href="ISplashScreenManager.html">ISplashScreenManager</a></li><li><a href="IUpdateIconCommand.html">IUpdateIconCommand</a></li><li><a href="IUpdateIconCommandValidator.html">IUpdateIconCommandValidator</a></li><li><a href="IUpdateSplashCommand.html">IUpdateSplashCommand</a></li><li><a href="IUpdateSplashCommandValidator.html">IUpdateSplashCommandValidator</a></li><li><a href="IWebViewComponentCreator.html">IWebViewComponentCreator</a></li></ul><h3>Global</h3><ul><li><a href="global.html#checkCommand">checkCommand</a></li><li><a href="global.html#runCommand">runCommand</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.3</a> on Tue Jul 16 2024 01:47:13 GMT+0530 (India Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
